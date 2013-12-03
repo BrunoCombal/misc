@@ -1,4 +1,4 @@
 misc
 ====
 
-miscellaneous tools for post-processing datasets
+Miscellaneous tools for post-processing datasets
