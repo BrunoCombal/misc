@@ -3,12 +3,12 @@
 # \author: Bruno Combal, IOC/UNESCO
 # \date: 2013, December
 
-# note: uses gdal_translate.
+# note: uses gdal command line.
 # usage: ncToGTiff.sh -o outFile -d datasetname[-w tmpdir] file*
 
 # ____________________
 function exitMessage(){
-    echo "Usage: ncToGTiff.sh -o OUTFILE -d DATASETNAME [-b 'ulx uly lrx lry'] [-w TMPDIR] FILE*"
+    echo "Usage: ncToGTiff.sh -o OUTFILE -d DATASETNAME [-b 'ulx uly lrx lry'] [-w TMPDIR] [-m maskSHP] [-p INPUTDATAPATH] [-n outnodata] FILE*"
     exit 1
 }
 # __________ main _____________
@@ -17,13 +17,19 @@ ncdfType='NETCDF'
 tmpdir='.'
 datasetname=''
 bbox='0 85 360 -85'
+mask=''
+nodata=1.e20
+inpath=''
 
-while getopts ":o:d:b:w:" opt; do
+while getopts ":o:d:b:w:m:n:p:" opt; do
     case $opt in
 	o) outName=${OPTARG};;
 	d) datasetname=${OPTARG};;
 	b) bbox=(${OPTARG});;
 	w) tmpdir=${OPTARG};;
+	m) mask=${OPTARG};;
+	n) nodata=${OPTARG};;
+	p) inpath=${OPTARG};;
 	\?) echo "Invalid option: -$OPTARG" >&2
 	    exitMessage
 	    ;;
@@ -45,11 +51,18 @@ if [ -z $datasetname ]; then
     exitMessage
 fi
 
+if [ -n $mask ]; then
+    if [ ! -e $mask ]; then
+	echo "mask file ${mask}  does not exist. Exit"
+	exitMessage
+    fi
+fi
+
 # create tmp if specfied
 mkdir -p $tmpdir
 
 # force remove outname
-rm -f ${outName} 
+rm -f ${outName}
 
 for ii in ${lstFiles[@]}
 do
@@ -64,20 +77,43 @@ do
 	exitMessage
     fi
 
-    echo "${ii##*/}:${} to netcdf"
-    gdal_translate -of netcdf -co "write_bottomup=no" -co "write_lonlat=yes" ${ncdfType}':"'${ii}'":'${datasetname} ${tmpfile}
+    echo "${ii##*/}:${datasetname} to flat netcdf: ${tmpfile}"
+    if [ -z "${inpath}" ]; then
+	thisfile=$ii
+    else
+	thisfile=${inpath}/${ii}
+    fi
+    gdal_translate -of netcdf -co "write_bottomup=no" -co "write_lonlat=yes" ${ncdfType}':"'${thisfile}'":'${datasetname} ${tmpfile}
     # append srs and bbox
+    echo ${tmpfile} " to GTiff: ${tmpOut}"
     gdal_translate -of gtiff -co "compress=lzw" -a_srs 'EPSG:4326' -a_ullr 0 85 360 -85 ${tmpfile} ${tmpOut}
-    rm -rf {tmpfile}
+    #rm -rf {tmpfile}
 
     # append the layer to the final file
     if [ -e ${outName} ]; then
-	mv ${tmpOut} ${outName}
-	echo $ii > ${outName}.meta
+	waiting=${tmpdir}/wait_${RANDOM}${RANDOM}_${outName##*/}
+	mv ${outName} ${waiting}
+	gdal_merge.py -separate -of gtiff -co "compress=lzw" `[ -n "$nodata" ] && echo -n "-n ${nodata}"` -o ${outName} ${waiting} ${tmpOut}
+	rm -f ${waiting}
+	echo ${thisfile##*/} >> ${outName}.meta
     else
-	gdal_merge.py -separate -of gtiff -co "compress=lzw" -n 1.e20 -o ${outName} ${outName} ${tmpOut}
-	echo $ii >> ${outName}.meta
+	mv ${tmpOut} ${outName}
+	echo ${thisfile##*/} > ${outName}.meta
     fi
 done
+
+# apply mask if needed
+if [ -n "${mask}" ]; then
+    layername=$(ogrinfo -al -geom=NO ${mask} | grep 'Layer name:' | sed 's/.*://')
+    nlayer=$(gdalinfo -norat -nogcp -noct ${outName} | grep -e 'Band [0-9]* Block.*Type.*' | wc -l)
+    echo $nlayer
+    for ((ib=1; ib<${nlayer}; ib++))
+    do
+	echo "Masking layer ${ib}"
+	gdal_rasterize -b ${ib} `[ -n "$nodata" ] && echo -n "-burn ${nodata}"` -l ${layername} $mask ${outName}
+    done
+fi
+
+
 
 # end of script
