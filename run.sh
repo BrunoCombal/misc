@@ -5,7 +5,7 @@
 
 indir=/data/tmp/new_algo/dhm_rcprcp85/
 outdir=/data/tmp/new_algo/export_tif
-maskSHP=/data/tmp/new_algo/world.shp
+maskSHP=/data/tmp/new_algo/landMask.shp
 mkdir -p $outdir
 tmpdir=$outdir/tmp
 mkdir -p $tmpdir
