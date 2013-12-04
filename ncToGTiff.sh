@@ -87,7 +87,7 @@ do
     # append srs and bbox
     echo ${tmpfile} " to GTiff: ${tmpOut}"
     gdal_translate -of gtiff -co "compress=lzw" -a_srs 'EPSG:4326' -a_ullr 0 85 360 -85 ${tmpfile} ${tmpOut}
-    #rm -rf {tmpfile}
+    rm -rf {tmpfile}
 
     # append the layer to the final file
     if [ -e ${outName} ]; then
@@ -114,6 +114,6 @@ if [ -n "${mask}" ]; then
     done
 fi
 
-
+rm -rf ${tmpdir}
 
 # end of script
