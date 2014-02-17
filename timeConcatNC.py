@@ -21,8 +21,22 @@ def exitMessage(msg, exitCode='1'):
     print usage()
     sys.exit(exitCode)
 # __________
-def do_concatenate(infile, var, outfile):
-    continue
+def do_concatenate(infiles, var, outfile):
+    
+    data=[]
+    grid=None
+
+    for thisName in infiles:
+        thisFile=cdms2.open(thisName, 'r')
+        data.append(thisFile[var][:])
+        grid=thisFile.getGrid()
+        thisFile.close()
+    
+    outdata=cdms2.createVariable(data, typecode='f', id=var, fill_value=1.e20)
+    outdata.setGrid(grid)
+    outHD = cdms2.open(outfile, 'w')
+    outHD.write(outdata)
+    outHD.close()
 # __________
 if __name__=="__main__":
 
