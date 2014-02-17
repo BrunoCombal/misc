@@ -9,13 +9,14 @@
 
 import cdms2
 import os
+import sys
 # __________
 def usage():
     text='SYNOPSIS:\n\ttimeConcatNC.py -v variable -o outfile file*'
     return text
 # __________
 def exitMessage(msg, exitCode='1'):
-    thisLogger.critical(msg)
+
     print msg
     print
     print usage()
