@@ -86,7 +86,7 @@ do
     gdal_translate -of netcdf -co "write_bottomup=no" -co "write_lonlat=yes" ${ncdfType}':"'${thisfile}'":'${datasetname} ${tmpfile}
     # append srs and bbox
     echo ${tmpfile} " to GTiff: ${tmpOut}"
-    gdal_translate -of gtiff -co "compress=lzw" -a_srs 'EPSG:4326' -a_ullr 0 85 360 -85 ${tmpfile} ${tmpOut}
+    gdal_translate -of gtiff -co "compress=lzw" -a_srs 'EPSG:4326' -a_ullr ${bbox[@]} ${tmpfile} ${tmpOut}
     rm -rf {tmpfile}
 
     # append the layer to the final file
