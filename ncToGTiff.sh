@@ -114,6 +114,6 @@ if [ -n "${mask}" ]; then
     done
 fi
 
-rm -rf ${tmpdir}
+
 
 # end of script
