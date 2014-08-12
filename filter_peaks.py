@@ -17,6 +17,7 @@ import os
 import string
 import sys
 import collections
+import gc
 # __________________
 def usage():
     text = 'SYNOPSIS:\n\t{0} -low lowFilter -high highFilter -nodata nodata -o outputfileRoot infile*'.format(__file__)
@@ -37,7 +38,7 @@ def exitMessage(msg, exitCode='1'):
 def do_detect(infile, var, lowFilter, highFilter, nodata, outfile):
     
     thisFile = cdms2.open(infile)
-    data = thisFile[var][:]
+    data = numpy.array(thisFile[var][:])
 
     pointList=[]
     pos=[]
@@ -45,16 +46,25 @@ def do_detect(infile, var, lowFilter, highFilter, nodata, outfile):
         for ii in [-1, 0, 1]:
             if ii or jj:
                 pos.append([jj, ii])
-    
+
+    threshold = len(pos)
+
     # borders not processed!
     for il in xrange(1, data.shape[0]-1):
-        print il
         for ic in xrange(1, data.shape[1]-1):
+            
             if data[il][ic] == highFilter:
-                test = 0
+                counter = 0
                 for (jj, ii) in pos:
-                    test = test + (data[il+jj][ic+ii]!=nodata) * ( data[il+jj][ic+ii]<=lowFilter)
-                if test == 0:
+                    # surrounding must be nodata or > lowFilter
+                    if (data[il+jj][ic+ii] == nodata):
+                        counter = counter + 1
+                    elif (data[il+jj][ic+ii] <= lowFilter):
+                        counter = counter + 1
+                    elif (data[il+jj][ic+ii] >= highFilter):
+                        counter = counter + 1
+                    #test = test + (data[il+jj][ic+ii]!=nodata) * ( data[il+jj][ic+ii]<lowFilter)
+                if counter >= threshold:
                     pointList.append([il, ic])
 
     thisFile.close()
@@ -63,42 +73,39 @@ def do_detect(infile, var, lowFilter, highFilter, nodata, outfile):
 # ___________________
 def do_filter(infile, var, pointList, outfileRoot):
 
-    cdms2.setNetcdfShuffleFlag(1)
-    cdms2.setNetcdfDeflateFlag(1)
-    cdms2.setNetcdfDeflateLevelFlag(3)
-
     pos=[]
     for jj in [-1, 0, 1]:
         for ii in [-1, 0, 1]:
             if ii or jj:
                 pos.append([jj, ii])
 
-    for ifile in infile:
-        print "filtering file ", ifile
-        thisFile = cdms2.open(ifile,'r')
-        data = thisFile[var]
+    thisFile = cdms2.open(infile)
+    data = None
+    data = thisFile[var][:].copy() # else can not write in the dataset
 
-        for (jj, ii) in pointList:
-            around=[]
-            for (yy, xx) in pos:
-                around.append(data[jj+yy][ii+xx])
-            values = collections.Counter(around)
-            data[jj][ii]=values.most_common(1) # should work well with integers
-        # let's write an output
-        # get the file path
-        thisPath = os.path.dirname(infile)
-        # get the file name
-        fname = os.path.basename(infile)
-        # build the output: delete if exists
-        outfile = os.path.join(thisPath, '{0}_{1}'.format(outfileRoot, fname) )
-        if os.path.exists(outfile): os.remove(outfile)
-        # write the file
-        thisOut = cdms2.open(outfile,'w')
-        var = cdms2.createVariable(data, id=var, grid=thisFile[var].getGrid())
-        thisOut.write(var)
-        thisOut.close()
-
-        thisFile.close()
+    for (jj, ii) in pointList:
+        around = []
+        for (yy, xx) in pos: around.append(data[jj+yy][ii+xx])
+        values = collections.Counter(around)
+        data[jj][ii]=values.most_common(1)[0][0] # should work well with integers
+    # let's write an output
+    # get the file path
+    thisPath = os.path.dirname(infile)
+    # get the file name
+    fname = os.path.basename(infile)
+    # build the output: delete if exists
+    outfile = os.path.join(thisPath, '{0}_{1}'.format(outfileRoot, fname) )
+    if os.path.exists(outfile): os.remove(outfile)
+    # write the file
+    print 'writing result to ',outfile
+    thisOut = cdms2.open(outfile,'w')
+    var = cdms2.createVariable(data, id=var, grid=thisFile[var].getGrid())
+    thisOut.write(var)
+    thisOut.close()
+    thisFile.close()
+    del data
+    del around
+    gc.collect()
 
     return
 # ___________________
@@ -110,6 +117,10 @@ if __name__=="__main__":
     highFilter=10
     nodata=-1
     var=None #'lvl2_freq'
+
+    cdms2.setNetcdfShuffleFlag(1)
+    cdms2.setNetcdfDeflateFlag(1)
+    cdms2.setNetcdfDeflateLevelFlag(3)
 
     # read input parameter
     ii=1
@@ -135,15 +146,17 @@ if __name__=="__main__":
         if not os.path.exists(thisFile):
             exitMessage('Input file does not exist. Exit(4).',4)
 
+
     print 'Getting reference points: '
     pointList = do_detect(infile[0], var, lowFilter, highFilter, nodata, outfileRoot)
+    if len(pointList)==0:
+        exitMessage('Found no point to correct')
 
-    for pp in pointList:
-        print pp
+    print 'Found {0} points'.format(len(pointList))
 
     # now filter all files in the series
-    print 'filtering now'
-    do_filter(infile, var, pointList, outfileRoot)
+    for thisFile in infile:
+        do_filter(thisFile, var, pointList, outfileRoot)
 
 
 # end of script

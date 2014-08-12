@@ -56,7 +56,18 @@ def do_fileIncrementedList(outName, nfiles):
 
     return outList  
 # ________________________
-def do_colorize(infileList, lut, outfileList):
+def do_colorize(infileList, band, lut, outfileList):
+
+
+    outDrv = gdal.GetDriverByName('png')
+    
+    for thisFile, thisOutFile in zip(infileList, outfileList):
+        # process input file thisFile
+        print thisFile, thisOutFile
+        inFid = gdal.open( thisFile, GA_ReadOnly)
+
+        outDS = outDrv.Create( thisOutFile, inFid.RasterXSize, inFid.RasterYSize, 3, GDT_Byte, [])
+
     return
 # ________________________
 if __name__=="__main__":
@@ -64,7 +75,7 @@ if __name__=="__main__":
     infile=[]
     outfileRoot=None
     lut=None
-    bands=[]
+    band=None
 
     ii = 1
     while ii < len(sys.argv):
@@ -76,6 +87,8 @@ if __name__=="__main__":
         elif arg== '-lut':
             ii = ii + 1
             lut = sys.argv[ii]
+        elif arg=='-b':
+            band = sys.argv[ii]
         else:
             infile.append(arg)
         ii = ii + 1
@@ -97,12 +110,10 @@ if __name__=="__main__":
         exitMessage('Look up table file {0} does not exists. Exit(11).'.format(lut), 11)
 
     # prepare a list of outfiles
-    outfileList=do_fileIncrementedList(outfileGeneric, len(infile))
-
-    print outfileList
+    outfileList=do_fileIncrementedList( outfileGeneric, len(infile) )
 
     # call colorization function
-    do_colorize(infile, lut, outfile)
+    do_colorize(infile, band, lut, outfileList)
 
 
 # end of script

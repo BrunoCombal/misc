@@ -3,7 +3,7 @@
 # \author: Bruno Combal, IOC/UNESCO
 # \date: 2013, December
 
-rcp='rcp85'
+rcp='rcp45'
 
 indir='/data/tmp/new_algo/dhm_rcp'${rcp}'/'
 outdir=/data/tmp/new_algo/export_tif
@@ -13,7 +13,7 @@ tmpdir=$outdir/tmp
 mkdir -p $tmpdir
 
 
-for decade in 2030 2040 2050
+for decade in 2010 2020
 do
     nodata=-1
     echo 'frequency: nc to gtiff'

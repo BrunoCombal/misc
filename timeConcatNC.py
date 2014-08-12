@@ -10,6 +10,7 @@
 import cdms2
 import os
 import sys
+import numpy
 # __________
 def usage():
     text='SYNOPSIS:\n\ttimeConcatNC.py -v variable -o outfile file*'
@@ -24,13 +25,19 @@ def exitMessage(msg, exitCode='1'):
 # __________
 def do_concatenate(infiles, var, outfile):
     
-    data=[]
+    data=None
     grid=None
 
-    for thisName in infiles:
+    for index, thisName in enumerate(infiles):
+        print '{1}: Opening file {0}'.format(thisName, index)
         thisFile=cdms2.open(thisName, 'r')
-        data.append(thisFile[var][:])
-        grid=thisFile.getGrid()
+        if not var in thisFile.variables.keys():
+            exitMessage('Variable {0} not found in file {1}. Exit 100.'.format(var, thisName),100)
+        if data is None:
+            thisShape = thisFile[var][:].shape
+            data = numpy.zeros( (len(infiles), thisShape[0], thisShape[1]) )+1.e20
+        data[index]=thisFile[var][:]
+        grid=thisFile[var].getGrid()
         thisFile.close()
     
     outdata=cdms2.createVariable(data, typecode='f', id=var, fill_value=1.e20)
