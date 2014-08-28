@@ -21,7 +21,7 @@ mask=''
 nodata=1.e20
 inpath=''
 
-while getopts ":o:d:b:w:m:n:p:" opt; do
+while getopts ":o:d:b:w:m:n:p:c:s:" opt; do
     case $opt in
 	o) outName=${OPTARG};;
 	d) datasetname=${OPTARG};;
@@ -86,6 +86,8 @@ do
 	thisfile=${inpath}/${ii}
     fi
     gdal_translate -of netcdf -co "write_bottomup=no" -co "write_lonlat=yes" ${ncdfType}':"'${thisfile}'":'${datasetname} ${tmpfile}
+    echo  gdal_translate -of netcdf -co "write_bottomup=no" -co "write_lonlat=yes" ${ncdfType}':"'${thisfile}'":'${datasetname} ${tmpfile}
+    exit
     # append srs and bbox
     echo ${tmpfile} " to GTiff: ${tmpOut}"
     # rescale command
@@ -108,6 +110,8 @@ do
 	echo ${thisfile##*/} > ${outName}.meta
     fi
 done
+
+exit
 
 # apply color mapping
 if [ -e "$colorMap" ]; then
