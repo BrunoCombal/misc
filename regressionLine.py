@@ -9,12 +9,13 @@ import string
 import sys
 # _________________________________
 def usage():
-    text='SYNOPSIS:\n\regressionLine.py [-d delimiter] [-skip number] [-xcol number] [-ycol number] input.csv'
+    text='SYNOPSIS:\n\regressionLine.py [-d delimiter] [-skip number] [-xcol number] [-ycol number] [-xval listOfXval] input.csv'
     text = text+'\tinput.csv: A csv (comma separated file) containing the data for computing the regression line. Column 1: x, Column 2: y\n'
     text = text+'\t-d delimiter: Defines a data delimiter; default delimiter is ","\n'
     text = text+'\tskip number: number of lines to skip; default is 0\n'
     text = text+'\txcol number: position of the x-values column; default is 0\n'
     text = text+'\tycol number: position of the y-values column; default is 1\n'
+    text = text+'\txval listOfXval: a comma separated list of xvalues to evaluate the regression line; for example write -xval "1998,2013". Default is to output the regression parameter as slope and bias (y=slope.x + bias)\n'
     return text
 # _________________________________
 def exitMessage(msg, exitCode='1'):
@@ -27,7 +28,8 @@ def exitMessage(msg, exitCode='1'):
 def do_readData(infile, skip, delimiter, xcol, ycol):
 
     iskip=0
-
+    xval=[]
+    yval=[]
     # read data
     with open(infile, 'r') as fid:
         for line in fid:
@@ -35,16 +37,30 @@ def do_readData(infile, skip, delimiter, xcol, ycol):
                 iskip = iskip + 1
             else:
                 thisData = string.split(line, delimiter)
-                print thisData[xcol], thisData[ycol]
-    # split with the delimiter character
-    #thisList = string.split(line, delimiter)
+                xval.append(float(thisData[xcol]))
+                yval.append(float(thisData[ycol]))
 
+    return [xval, yval]
+# _________________________________
+def do_regressionLine(infile, skip, delimiter, xcol, ycol, xval):
+    
+    (x, y) = do_readData(infile, skip, delimiter, xcol, ycol)
+
+    regression = numpy.polyfit(x, y, 1)
+    if xval is None:
+        print regression
+    else:
+        for ii in xval:
+            print ii, regression[0]*ii + regression[1]
 
 # _________________________________
-def do_regressionLine(infile, skip, delimiter, xcol, ycol):
-    
-    data = do_readData(infile, skip, delimiter, xcol, ycol)
+def do_listToArray(listVal):
+    tmp = string.split(listVal,',')
+    data=[]
 
+    for ii in tmp:
+        data.append(float(ii))
+    return data
 # _________________________________
 if __name__=="__main__":
     infile=None
@@ -52,6 +68,7 @@ if __name__=="__main__":
     skip=0
     xcol=0
     ycol=1
+    xval=None
 
     ii = 1
     while ii < len(sys.argv):
@@ -68,6 +85,9 @@ if __name__=="__main__":
         if arg == '-ycol':
             ii = ii + 1
             ycol = int(sys.argv[ii])
+        if arg=='-xval':
+            ii = ii + 1
+            xval = do_listToArray(sys.argv[ii])
         else:
             infile = sys.argv[ii]
 
@@ -78,6 +98,6 @@ if __name__=="__main__":
     if not os.path.exists(infile):
         exitMessage('Input file {0} does not exist. Exit(2)'.format(infile), 2)
 
-    do_regressionLine(infile, skip, delimiter, xcol, ycol)
+    do_regressionLine(infile, skip, delimiter, xcol, ycol, xval)
 
 # end of code
