@@ -72,9 +72,25 @@ function do_wp(){
     done
 }
 
+# _________________
+function do_regression(){
+    bindir=/home/bruno/github/misc
+    indir=/data/all_partners/lmes_productivity
+    for ifile in ${indir}/*PPY-Y.CSV
+    do
+	code=$(echo ${ifile#*-} |  sed 's/-.*//')
+	${bindir}/regressionLine.py -xval '1998,2013' -d ',' -xcol 3 -ycol 4 -skip 1 ${ifile} | while read line
+	do
+	    echo $code $line
+	done
+    done
+}
+
 # main: call the desired function
-ncToColor
+#ncToColor
 # do_dhm
-do_wp rcp45
+#do_wp rcp45
+
+do_regression
 
 # end of script
