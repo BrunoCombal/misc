@@ -8,7 +8,7 @@
 
 # ____________________
 function exitMessage(){
-    echo "Usage: ncToGTiff.sh -o OUTFILE -d DATASETNAME [-b 'ulx uly lrx lry'] [-w TMPDIR] [-m maskSHP] [-p INPUTDATAPATH] [-n outnodata] FILE*"
+    echo "Usage: ncToGTiff.sh [-c colormap] [-s src_min src_max dst_min dst_max] -o OUTFILE -d DATASETNAME)) [-b 'ulx uly lrx lry'] [-w TMPDIR] [-m maskSHP] [-p INPUTDATAPATH] [-n outnodata] FILE*"
     exit 1
 }
 # __________ main _____________
@@ -21,7 +21,7 @@ mask=''
 nodata=1.e20
 inpath=''
 
-while getopts ":o:d:b:w:m:n:p:" opt; do
+while getopts ":o:d:b:w:m:n:p:c:s:" opt; do
     case $opt in
 	o) outName=${OPTARG};;
 	d) datasetname=${OPTARG};;
@@ -30,6 +30,8 @@ while getopts ":o:d:b:w:m:n:p:" opt; do
 	m) mask=${OPTARG};;
 	n) nodata=${OPTARG};;
 	p) inpath=${OPTARG};;
+	c) colorMap=${OPTARG};;
+	s) linScale=(${OPTARG});;
 	\?) echo "Invalid option: -$OPTARG" >&2
 	    exitMessage
 	    ;;
@@ -84,9 +86,16 @@ do
 	thisfile=${inpath}/${ii}
     fi
     gdal_translate -of netcdf -co "write_bottomup=no" -co "write_lonlat=yes" ${ncdfType}':"'${thisfile}'":'${datasetname} ${tmpfile}
+    echo  gdal_translate -of netcdf -co "write_bottomup=no" -co "write_lonlat=yes" ${ncdfType}':"'${thisfile}'":'${datasetname} ${tmpfile}
+    exit
     # append srs and bbox
     echo ${tmpfile} " to GTiff: ${tmpOut}"
-    gdal_translate -of gtiff -co "compress=lzw" -a_srs 'EPSG:4326' -a_ullr ${bbox[@]} ${tmpfile} ${tmpOut}
+    # rescale command
+    rescale=''
+    if [ -e "$linScale" ]; then
+	rescale="-scale ${OPTARG[@]}"
+    fi
+    gdal_translate $rescale -of gtiff -co "compress=lzw" -a_srs 'EPSG:4326' -a_ullr ${bbox[@]} ${tmpfile} ${tmpOut}
     rm -rf {tmpfile}
 
     # append the layer to the final file
@@ -101,6 +110,15 @@ do
 	echo ${thisfile##*/} > ${outName}.meta
     fi
 done
+
+exit
+
+# apply color mapping
+if [ -e "$colorMap" ]; then
+    cp -f ${outName} ${tmpOut}
+    rm -f ${outName}
+    gdaldem color-relief ${tmpOut} ${colorMap} ${outName}
+fi
 
 # apply mask if needed
 if [ -n "${mask}" ]; then

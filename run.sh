@@ -2,7 +2,25 @@
 
 # \author: Bruno Combal, IOC/UNESCO
 # \date: 2013, December
+
 # provides examples showing how to use others scripts
+
+# convert netcdf to colored gtiff
+function ncToColor(){
+    indir='/Users/bruno/Desktop/t2/results'
+    outdir='/Users/bruno/Desktop/t2/colored/'
+    mkdir -p ${outdir}
+    tmpdir=${outdir}/tmp
+    mkdir -p ${tmpdir}
+    nodata=100000000000000000000
+
+    for ii in ${indir}/*.nc
+    do
+	thisFile=${ii##*/}
+	./ncToGtiff.sh -s '273 313 1 255' -c color_ramps/NCV_jet.rgb -o ${outdir}/${thisFile%.nc}.tif -n $nodata -d mean_mean_thetao -w ${tmpdir} ${indir}/${thisFile}
+	echo ./ncToGtiff.sh -c /Users/bruno/Documents/github/misc/color_ramps/NCV_jet.rgb -o ${outdir}/${thisFile%.nc}.tif -n $nodata -d mean_mean_thetao -w ${tmpdir} ${indir}/${thisFile}
+    done
+}
 
 # export DHM datasets
 function do_dhm(){
@@ -54,7 +72,8 @@ function do_wp(){
     done
 }
 
-### main
+# main: call the desired function
+ncToColor
 # do_dhm
 do_wp rcp45
 
