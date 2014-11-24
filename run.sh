@@ -86,11 +86,20 @@ function do_regression(){
     done
 }
 
+# __________________________
+function do_cleanLine(){
+    bindir=/home/bruno/github/misc
+    datadir=/data/tmp/new_algo/tos_rcp85_forpublication/out/
+    ${bindir}/filter_verticalLine.py -o ${datadir}/interpolated_diff_decades_2050_2010.tif -of gtiff -co "compress=lzw" -lineDef 639 2 -lineDef 156 5 -lowerBound 0 -upperBound 10 ${datadir}/diff_decades_2050_2010_referenced.tif
+}
+# __________________________
 # main: call the desired function
 #ncToColor
 # do_dhm
 #do_wp rcp45
 
-do_regression
+# do_regression
+
+do_cleanLine
 
 # end of script
